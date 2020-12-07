@@ -94,6 +94,17 @@ We use `testing` package that is built-in in Golang and you can simply run the f
 ```shell
 go test -v ./hello-world/
 ```
+
+Retrieve a list of available movies
+```shell
+curl https://ehfia8tqca.execute-api.ap-southeast-2.amazonaws.com/Prod/getMovies
+```
+
+Retrieve information a about a specific movie
+```shell
+curl "https://ehfia8tqca.execute-api.ap-southeast-2.amazonaws.com/Prod/getMovie?movieId=2468"
+```
+
 # Appendix
 
 ### Golang installation
