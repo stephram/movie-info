@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  movie-info
+  
+  SAM Template for movie-info
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 5
+    Handler: main
+    Runtime: go1.x
+    MemorySize: 256
+    Tracing: Active # https://docs.aws.amazon.com/lambda/latest/dg/lambda-x-ray.html
+    Environment:
+      Variables:
+        # Make table name accessible as environment variable from function code during execution
+        MOVIE_TABLE: !Ref MoviesTable
+        MOVIE_DATA_ENDPOINT: "https://challenge.lexicondigital.com.au/api"
+        MOVIE_PROVIDERS: '["cinemaworld", "filmworld"]'
+        MOVIE_DATA_API_KEY: "Yr2636E6BTD3UCdleMkf7UEdqKnd9n361TQL9An7"
+
+Resources:
+  GetMoviesFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      Description: Get the available movies
+      CodeUri: lambdas/getMovies/
+      Policies:
+        # Give Create/Read/Update/Delete Permissions to the MoviesTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MoviesTable
+      Events:
+        CatchAll:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /getMovies
+            Method: GET
+  GetMovieFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      Description: Get information about a Movie
+      CodeUri: lambdas/getMovie/
+      Policies:
+        # Give Create/Read/Update/Delete Permissions to the MoviesTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MoviesTable
+      Events:
+        CatchAll:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /getMovie
+            Method: GET
+
+  # DynamoDB table to store item: {id: &lt;ID&gt;, name: &lt;NAME&gt;}
+  MoviesTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: id
+        Type: String
+      ProvisionedThroughput:
+        ReadCapacityUnits: 2
+        WriteCapacityUnits: 2
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  MovieInfoAPI:
+    Description: "API Gateway endpoint URL for Prod environment"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/movie-info/"
+  GetMoviesFunction:
+    Description: "Get Movie List Function ARN"
+    Value: !GetAtt GetMoviesFunction.Arn
+  GetMovieFunction:
+    Description: "Get Movie Info Function ARN"
+    Value: !GetAtt GetMovieFunction.Arn
+  MovieInfoFunctionIamRole:
+    Description: "Implicit IAM Role created for Movie Info functions"
+    Value: !GetAtt GetMoviesFunctionRole.Arn

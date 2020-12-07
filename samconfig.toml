@@ -1,0 +1,10 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "movie-info"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-1cu3rvskuyri4"
+s3_prefix = "movie-info"
+region = "ap-southeast-2"
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM"
