@@ -10,13 +10,15 @@ import (
 	"movie-info/internal/models"
 )
 
-func UpdateProviderMovies(tableName string, movieProvider string, movieItems []models.MovieItem) error {
+func UpdateProviderMovies(tableName string, movieProvider string, movieItems []*models.MovieItem) error {
 	ddb := createClient()
 
 	for _, movieItem := range movieItems {
-		av, err := dynamodbattribute.MarshalMap(movieItem)
+		dbMovieItem := convertToDbMovieItem(movieProvider, *movieItem)
+
+		av, err := dynamodbattribute.MarshalMap(dbMovieItem)
 		if err != nil {
-			return errors.Wrap(err, "failed to marshal MovieItem")
+			return errors.Wrap(err, "failed to marshal DbMovieItem")
 		}
 		input := &dynamodb.PutItemInput{
 			Item:      av,
@@ -26,33 +28,38 @@ func UpdateProviderMovies(tableName string, movieProvider string, movieItems []m
 		if pErr != nil {
 			return errors.Wrap(pErr, "failed to update database")
 		}
-		log.Printf("Added Movie, ID=%s, Title=%s", movieItem.ID, movieItem.Title)
 	}
+	log.Printf("UpdateProviderMovies: movieProvider=%s, count=%d", movieProvider, len(movieItems))
 	return nil
 }
 
-func ReadProviderMovies(tableName string, provider string) ([]models.MovieItem, error) {
+func GetProviderMovies(tableName string, movieProvider string) ([]*models.MovieItem, error) {
 	ddb := createClient()
 
-	result, gErr := ddb.GetItem(&dynamodb.GetItemInput{
+	res, qErr := ddb.Query(&dynamodb.QueryInput{
 		TableName: aws.String(tableName),
-		Key: map[string]*dynamodb.AttributeValue{
-			"provider": {
-				N: aws.String(provider),
+		// IndexName: aws.String("Provider"),
+		KeyConditions: map[string]*dynamodb.Condition{
+			"Provider": {
+				ComparisonOperator: aws.String("EQ"),
+				AttributeValueList: []*dynamodb.AttributeValue{
+					{
+						S: aws.String(movieProvider),
+					},
+				},
 			},
 		},
 	})
-	if gErr != nil {
-		return nil, errors.Wrap(gErr, "failed to GetItem")
+	if qErr != nil {
+		return nil, errors.Wrapf(qErr, "failed to query for provider %s", movieProvider)
 	}
-
-	movieItems := make([]models.MovieItem, 0)
-
-	uErr := dynamodbattribute.UnmarshalMap(result.Item, &movieItems)
+	dbMovieItems := make([]DbMovieItem, len(res.Items))
+	uErr := dynamodbattribute.UnmarshalListOfMaps(res.Items, &dbMovieItems)
 	if uErr != nil {
-		return nil, errors.Wrap(uErr, "failed to unmarshal movies for provider "+provider)
+		return nil, errors.Wrapf(uErr, "failed to unmarshal items")
 	}
-	return movieItems, nil
+	log.Printf("GetProviderMovies: movieProvider=%s, count=%d", movieProvider, len(dbMovieItems))
+	return convertToMovieItems(dbMovieItems), nil
 }
 
 func createClient() *dynamodb.DynamoDB {

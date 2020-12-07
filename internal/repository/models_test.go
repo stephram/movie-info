@@ -11,19 +11,19 @@ func TestConvertToDbMovieItem(t *testing.T) {
 		{
 			ID:         "fw12345678",
 			Title:      "one",
-			Poster:     "",
+			Poster:     "one-poster",
 			IsReliable: true,
 		},
 		{
 			ID:         "fw24682468",
 			Title:      "two",
-			Poster:     "",
+			Poster:     "two-poster",
 			IsReliable: true,
 		},
 		{
 			ID:         "fw35793579",
 			Title:      "tre",
-			Poster:     "",
+			Poster:     "tre-poster",
 			IsReliable: true,
 		},
 	}
@@ -36,6 +36,22 @@ func TestConvertToDbMovieItem(t *testing.T) {
 			Title:    "one",
 			Type:     "movie",
 			Poster:   "one-poster",
+		},
+		{
+			ID:       "fw24682468",
+			MovieID:  "24682468",
+			Provider: "Filmworld",
+			Title:    "two",
+			Type:     "movie",
+			Poster:   "two-poster",
+		},
+		{
+			ID:       "fw35793579",
+			MovieID:  "35793579",
+			Provider: "Filmworld",
+			Title:    "tre",
+			Type:     "movie",
+			Poster:   "tre-poster",
 		},
 	}
 
@@ -57,5 +73,17 @@ func TestConvertToDbMovieItem(t *testing.T) {
 		assert.NotNil(t, movieItem)
 		assert.Equal(t, dbMovieItem.ID, movieItem.ID)
 		assert.Equal(t, dbMovieItem.Title, movieItem.Title)
+	})
+
+	t.Run("convertToMovieItems", func(t *testing.T) {
+		movieItems := convertToMovieItems(dbMovieItems)
+
+		assert.Equal(t, len(dbMovieItems), len(movieItems))
+
+		for i, dbMovieItem := range dbMovieItems {
+			assert.Equal(t, dbMovieItem.ID, movieItems[i].ID)
+			assert.Equal(t, dbMovieItem.Title, movieItems[i].Title)
+			assert.Equal(t, dbMovieItem.Poster, movieItems[i].Poster)
+		}
 	})
 }

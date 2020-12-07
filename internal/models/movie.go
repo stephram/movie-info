@@ -2,7 +2,7 @@ package models
 
 type MoviesResponse struct {
 	Provider string
-	Movies   []MovieItem
+	Movies   []*MovieItem
 }
 
 type MovieItem struct {
@@ -10,5 +10,6 @@ type MovieItem struct {
 	Title      string
 	Type       string
 	Poster     string
-	IsReliable bool `json:",omitempty"`
+	MovieID    string
+	IsReliable bool
 }
