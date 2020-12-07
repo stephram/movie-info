@@ -1,58 +1,97 @@
 package main
 
 import (
-	"errors"
-	"fmt"
-	"io/ioutil"
-	"net/http"
-	"os"
-
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"log"
+	"movie-info/internal/utils"
 )
 
 var (
-	// DefaultHTTPGetAddress Default Address
-	DefaultHTTPGetAddress = "https://checkip.amazonaws.com"
-
-	// ErrNoIP No IP found in response
-	ErrNoIP = errors.New("No IP in HTTP response")
-
-	// ErrNon200Response non 200 status code in response
-	ErrNon200Response = errors.New("Non 200 Response found")
+// Should be reading these from SSM
+// movieDataEndpoint  = os.Getenv("MOVIE_DATA_ENDPOINT")
+// movieDataApiKey    = os.Getenv("MOVIE_DATA_API_KEY")
+// movieProviderNames = os.Getenv("MOVIE_PROVIDERS")
+// movieTable         = os.Getenv("MOVIE_TABLE")
+//
+// client *http.Client
 )
 
+func init() {
+	// client = &http.Client{}
+}
+
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	resp, err := http.Get(DefaultHTTPGetAddress)
-	if err != nil {
-		return events.APIGatewayProxyResponse{}, err
-	}
+	log.Printf("RequestID=%s, RequestTime=%s, Path=%s, PathParameters=%+v, QueryStringParameters=%+v",
+		request.RequestContext.RequestID,
+		request.RequestContext.RequestTime,
+		request.Path,
+		request.PathParameters,
+		request.QueryStringParameters)
+	/*
+		var movieProviders []string
+		jsonErr := json.Unmarshal([]byte(movieProviderNames), &movieProviders)
+		if jsonErr != nil {
+			return utils.CreateApiGwResponse(500,
+				fmt.Sprintf("MOVIE_PROVIDERS environment variable is invalid. Value=%s", movieProviders)), nil
+		}
 
-	if resp.StatusCode != 200 {
-		return events.APIGatewayProxyResponse{}, ErrNon200Response
-	}
+		// movies := make(map[string][]*models.MovieItem)
+		movieMap := make(map[string]*models.MovieItem)
 
-	ip, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return events.APIGatewayProxyResponse{}, err
-	}
+		for _, movieProvider := range movieProviders {
+			req, _ := http.NewRequest("GET", movieDataEndpoint+"/"+movieProvider+"/movies", nil)
+			req.Header.Add("x-api-key", movieDataApiKey)
+			mRes, mErr := client.Do(req)
+			if mErr != nil {
+				return utils.CreateApiGwResponse(500, mErr.Error()), nil
+			}
+			defer mRes.Body.Close()
 
-	if len(ip) == 0 {
-		return events.APIGatewayProxyResponse{}, ErrNoIP
-	}
+			if mRes.StatusCode != 200 {
+				// Read cached results from DynamoDB
+				// movieItems, rErr := repository.GetProviderMovies(movieTable, movieProvider)
+				// if rErr != nil {
+				// 	log.Fatal(rErr)
+				// 	continue
+				// }
+				// movies[movieProvider] = setReliable(false, movieItems)
+				// aggregate(movies[movieProvider], movieMap)
+				continue
+			}
 
-	return events.APIGatewayProxyResponse{
-		Body: fmt.Sprintf("RequestID=%s, Path=%s, IP=%v, MOVIE_DATA_ENDPOINT=%s, MOVIE_DATA_API_KEY=%s, MOVIE_PROVIDERS=%v, MOVIE_TABLE=%s",
-			request.RequestContext.RequestID,
-			request.Path,
-			string(ip),
-			os.Getenv("MOVIE_DATA_ENDPOINT"),
-			os.Getenv("MOVIE_DATA_API_KEY"),
-			os.Getenv("MOVIE_PROVIDERS"),
-			os.Getenv("MOVIE_TABLE"),
-		),
-		StatusCode: 200,
-	}, nil
+			// Unmarshal the response, or if that fails try to read the most recent results for this
+			// provider from DynamoDB. If that fails then we don't return any movies for that provider.
+			var movieResponse models.MoviesResponse
+			jErr := json.NewDecoder(mRes.Body).Decode(&movieResponse)
+			if jErr != nil {
+				// Read cached results from DynamoDB
+				// movieItems, rErr := repository.GetProviderMovies(movieTable, movieProvider)
+				// if rErr != nil {
+				// 	return utils.CreateApiGwResponse(500, jErr.Error()), nil
+				// }
+				// movies[movieProvider] = setReliable(false, movieItems)
+				// aggregate(movies[movieProvider], movieMap)
+				continue
+			}
+			uErr := repository.UpdateProviderMovies(movieTable, movieProvider, movieResponse.Movies)
+			if uErr != nil {
+				log.Fatalf(errors.Wrapf(uErr, "failed to update database").Error())
+			}
+			// movies[movieProvider] = setReliable(true, movieResponse.Movies)
+
+			// aggregate(movies[movieProvider], movieMap)
+		}
+
+		payload, jsonErr := json.Marshal(movieMap)
+		if jsonErr != nil {
+			return utils.CreateApiGwResponse(500, jsonErr.Error()), nil
+		}
+		// OK, return the Movies
+		return utils.CreateApiGwResponse(200, string(payload)), nil
+
+	*/
+	return utils.CreateApiGwResponse(200, "Hello"), nil
 }
 
 func main() {

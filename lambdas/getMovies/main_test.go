@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
+	"movie-info/internal/models"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,43 +12,6 @@ import (
 )
 
 func TestHandler(t *testing.T) {
-	t.Run("Unable to get IP", func(t *testing.T) {
-		DefaultHTTPGetAddress = "http://127.0.0.1:12345"
-
-		_, err := handler(events.APIGatewayProxyRequest{})
-		if err == nil {
-			t.Fatal("Error failed to trigger with an invalid request")
-		}
-	})
-
-	t.Run("Non 200 Response", func(t *testing.T) {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(500)
-		}))
-		defer ts.Close()
-
-		DefaultHTTPGetAddress = ts.URL
-
-		_, err := handler(events.APIGatewayProxyRequest{})
-		if err != nil && err.Error() != ErrNon200Response.Error() {
-			t.Fatalf("Error failed to trigger with an invalid HTTP response: %v", err)
-		}
-	})
-
-	t.Run("Unable decode IP", func(t *testing.T) {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(500)
-		}))
-		defer ts.Close()
-
-		DefaultHTTPGetAddress = ts.URL
-
-		_, err := handler(events.APIGatewayProxyRequest{})
-		if err == nil {
-			t.Fatal("Error failed to trigger with an invalid HTTP response")
-		}
-	})
-
 	t.Run("Successful Request", func(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(200)
@@ -54,11 +19,64 @@ func TestHandler(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		DefaultHTTPGetAddress = ts.URL
-
 		_, err := handler(events.APIGatewayProxyRequest{})
 		if err != nil {
 			t.Fatal("Everything should be ok")
+		}
+	})
+}
+
+func TestPrivates(t *testing.T) {
+	movieItems := []*models.MovieItem{
+		{
+			ID:         "cw12345678",
+			Title:      "one",
+			Poster:     "",
+			IsReliable: true,
+		},
+		{
+			ID:         "cw24682468",
+			Title:      "two",
+			Poster:     "",
+			IsReliable: true,
+		},
+		{
+			ID:         "cw35793579",
+			Title:      "tre",
+			Poster:     "",
+			IsReliable: true,
+		},
+	}
+	t.Run("Set Reliable", func(t *testing.T) {
+		for _, movieItem := range movieItems {
+			assert.True(t, movieItem.IsReliable)
+		}
+
+		_movieItems := setReliable(false, movieItems)
+
+		assert.NotNil(t, _movieItems)
+
+		for _, movieItem := range _movieItems {
+			assert.False(t, movieItem.IsReliable)
+		}
+
+		for _, movieItem := range movieItems {
+			assert.False(t, movieItem.IsReliable)
+		}
+	})
+
+	t.Run("updateMovieIDs", func(t *testing.T) {
+		for _, movieItem := range movieItems {
+			assert.Equal(t, "", movieItem.MovieID)
+		}
+
+		movieMap := make(map[string]*models.MovieItem)
+		aggregate(movieItems, movieMap)
+		updateMovieIDs(movieMap)
+
+		for _, v := range movieMap {
+			assert.Equal(t, "", v.ID)
+			assert.NotEqual(t, "", v.MovieID)
 		}
 	})
 }
