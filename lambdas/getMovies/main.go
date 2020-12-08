@@ -90,7 +90,12 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	// Process the IDs to suit the context.
 	updateMovieIDs(movieMap)
 
-	payload, jsonErr := json.Marshal(movieMap)
+	movieList := make([]*models.MovieItem, 0)
+	for _, movieItem := range movieMap {
+		movieList = append(movieList, movieItem)
+	}
+
+	payload, jsonErr := json.Marshal(movieList)
 	if jsonErr != nil {
 		return utils.CreateApiGwResponse(500, jsonErr.Error()), nil
 	}

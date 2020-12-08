@@ -1,6 +1,6 @@
 # movie-info
 
-Generated using AWS SAM CLI.
+The basics of this project were generated using AWS SAM CLI.
 
 ```bash
 .
@@ -51,10 +51,10 @@ If the previous command ran successfully you should now be able to hit the follo
 ```yaml
 ...
 Events:
-    HelloWorld:
+    CatchAll:
         Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
         Properties:
-            Path: /hello
+            Path: /movies
             Method: get
 ```
 
@@ -64,10 +64,10 @@ AWS Lambda Golang runtime requires a flat folder with the executable generated o
 
 ```yaml
 ...
-    FirstFunction:
+    GetMoviesFunction:
         Type: AWS::Serverless::Function
         Properties:
-            CodeUri: hello_world/
+            CodeUri: lambdas/getMovies/
             ...
 ```
 
@@ -89,20 +89,21 @@ You can find your API Gateway Endpoint URL in the output values displayed after 
 
 ### Testing
 
-We use `testing` package that is built-in in Golang and you can simply run the following command to run our tests:
+The `test` task will discover and run all of the tests and perform a lint check.
 
 ```shell
-go test -v ./hello-world/
+make test
 ```
 
 Retrieve a list of available movies
 ```shell
-curl https://ehfia8tqca.execute-api.ap-southeast-2.amazonaws.com/Prod/getMovies
+curl "https://ehfia8tqca.execute-api.ap-southeast-2.amazonaws.com/Prod/movies"
+
 ```
 
 Retrieve information a about a specific movie
 ```shell
-curl "https://ehfia8tqca.execute-api.ap-southeast-2.amazonaws.com/Prod/getMovie?movieId=2468"
+curl "https://ehfia8tqca.execute-api.ap-southeast-2.amazonaws.com/Prod/movie?movieId=0076759" 
 ```
 
 # Appendix

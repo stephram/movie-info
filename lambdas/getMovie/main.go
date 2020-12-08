@@ -44,7 +44,7 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}
 	log.Info().Interface("movieItems", movieItems).Msgf("read movies for movieID %s", movieID)
 
-	movieMap := make(map[string]*models.MovieItem)
+	movieList := make([]*models.MovieItem, 0)
 
 	for _, movieItem := range movieItems {
 		uri := movieDataEndpoint + "/" + movieItem.Provider + "/movie/" + movieItem.ID
@@ -60,7 +60,7 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 
 		if mRes.StatusCode != 200 {
 			log.Error().Msgf("Status %d (%s) : failed to retrieve movie from %s", mRes.StatusCode, mRes.Status, uri)
-			movieMap[movieItem.ID] = updateMovieItem(false, movieID, movieItem)
+			movieList = append(movieList, updateMovieItem(false, movieID, movieItem))
 			continue
 		}
 		log.Info().Msgf("retrieved movie info from %s", uri)
@@ -69,22 +69,23 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		jErr := json.NewDecoder(mRes.Body).Decode(&movieInfoResponse)
 		if jErr != nil {
 			log.Err(jErr).Msgf("failed to decode MovieInfoResponse from url %s", uri)
-			movieMap[movieItem.ID] = updateMovieItem(false, movieID, movieItem)
+			movieList = append(movieList, updateMovieItem(false, movieID, movieItem))
 			continue
 		}
-		movieMap[movieItem.ID] = updateMovieItem(true, movieID, models.ConvertToMovieItem(movieInfoResponse))
-		movieMap[movieItem.ID].Provider = movieItem.Provider
+		_movieItem := models.ConvertToMovieItem(movieInfoResponse)
+		_movieItem.Provider = movieItem.Provider
+		movieList = append(movieList, updateMovieItem(true, movieID, _movieItem))
 
-		rErr := repository.UpdateMovieItem(movieTable, movieMap[movieItem.ID])
+		rErr := repository.UpdateMovieItem(movieTable, _movieItem)
 		if rErr != nil {
 			log.Err(rErr).Msgf("failed to update MovieItem")
 		}
 	}
-	payload, jsonErr := json.Marshal(movieMap)
+	payload, jsonErr := json.Marshal(movieList)
 	if jsonErr != nil {
 		return utils.CreateApiGwResponse(500, jsonErr.Error()), nil
 	}
-	log.Info().Interface("movies", movieMap).Msgf("Success reading movies for MovieID %s", movieID)
+	log.Info().Interface("movies", movieList).Msgf("Success reading movies for MovieID %s", movieID)
 
 	// OK, return the Movies
 	return utils.CreateApiGwResponse(200, string(payload)), nil
