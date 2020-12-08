@@ -1,0 +1,59 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Será que sim?</title>
+    <link href="style.css" type="text/css" rel="stylesheet">
+    <link href="bootstrap.min.css" type="text/css" rel="stylesheet">
+
+    <script src="handlebars-v1.1.2.js"></script>
+    <script src="main.js"></script>
+</head>
+<body>
+    <script>
+        var template = `
+        <table width="80%" align="center">
+            <tr><td style="text-align:center;font-size:25px" colspan="4">Prince's Theatre</td></tr>
+            <tr><td style="text-align:center;font-size:18px" colspan="4">Classic Movies At Home</td></tr>
+            <tr><td style="text-align:center;font-size:14px" colspan="4">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation</td></tr>
+            {{#each response}}
+            <tr>
+                {{#each this}}
+                <td style="text-align:left"><a href="{{MovieURL}}">{{Title}}</a></td>
+                {{/each}}
+            </tr>
+            {{/each}}
+            {{#if notReliable}}
+            <tr><td style="text-align:center;font-size:12px" colspan="4">Movie listing may not be accurate, try refreshing</td></tr>
+            {{/if}}
+        </table>
+        `;
+
+        const movies = pm.response.json()
+
+        let tRows = []
+        let tRow = []
+        let isReliable = true
+
+        tRows.push(tRow)
+
+        for (i = 0; i < movies.length; i++) {
+            const movie = movies[i]
+            movie.MovieURL = "https://" + pm.request.url.getHost() + "/Prod/movie?movieID=" + movie.MovieID
+            tRow.push(movie)
+
+            if ((i + 1) % 4 == 0) {
+                tRow = []
+                tRows.push(tRow)
+            }
+
+            if (!movie.IsReliable)
+                isReliable = false
+        }
+
+        pm.visualizer.set(template, {
+            response: tRows,
+            notReliable: !isReliable
+        });
+    </script>
+</body>
