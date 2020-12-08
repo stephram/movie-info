@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
-	"log"
+	_ "log"
 	"movie-info/internal/models"
 	"movie-info/internal/repository"
 	"movie-info/internal/utils"
@@ -21,6 +21,7 @@ var (
 	movieDataApiKey    = os.Getenv("MOVIE_DATA_API_KEY")
 	movieProviderNames = os.Getenv("MOVIE_PROVIDERS")
 	movieTable         = os.Getenv("MOVIE_TABLE")
+	log                = utils.GetLogger()
 
 	client *http.Client
 )
@@ -30,7 +31,7 @@ func init() {
 }
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	log.Printf("RequestID=%s, RequestTime=%s", request.RequestContext.RequestID, request.RequestContext.RequestTime)
+	log.Info().Msgf("RequestID=%s, RequestTime=%s", request.RequestContext.RequestID, request.RequestContext.RequestTime)
 
 	var movieProviders []string
 	jsonErr := json.Unmarshal([]byte(movieProviderNames), &movieProviders)
@@ -45,6 +46,7 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	for _, movieProvider := range movieProviders {
 		req, _ := http.NewRequest("GET", movieDataEndpoint+"/"+movieProvider+"/movies", nil)
 		req.Header.Add("x-api-key", movieDataApiKey)
+
 		mRes, mErr := client.Do(req)
 		if mErr != nil {
 			return utils.CreateApiGwResponse(500, mErr.Error()), nil
@@ -55,10 +57,10 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 			// Read cached results from DynamoDB
 			movieItems, rErr := repository.GetProviderMovies(movieTable, movieProvider)
 			if rErr != nil {
-				log.Fatal(rErr)
+				log.Err(rErr).Msgf("failed read movies for provider %s", movieProvider)
 				continue
 			}
-			movies[movieProvider] = setReliable(false, movieItems)
+			movies[movieProvider] = models.SetReliable(false, movieItems)
 			aggregate(movies[movieProvider], movieMap)
 			continue
 		}
@@ -73,15 +75,15 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 			if rErr != nil {
 				return utils.CreateApiGwResponse(500, jErr.Error()), nil
 			}
-			movies[movieProvider] = setReliable(false, movieItems)
+			movies[movieProvider] = models.SetReliable(false, movieItems)
 			aggregate(movies[movieProvider], movieMap)
 			continue
 		}
 		uErr := repository.UpdateProviderMovies(movieTable, movieProvider, movieResponse.Movies)
 		if uErr != nil {
-			log.Fatalf(errors.Wrapf(uErr, "failed to update database").Error())
+			log.Err(uErr).Msgf(errors.Wrapf(uErr, "failed to update database").Error())
 		}
-		movies[movieProvider] = setReliable(true, movieResponse.Movies)
+		movies[movieProvider] = models.SetReliable(true, movieResponse.Movies)
 
 		aggregate(movies[movieProvider], movieMap)
 	}
@@ -107,14 +109,6 @@ func updateMovieIDs(movieMap map[string]*models.MovieItem) {
 		v.MovieID = v.ID[2:]
 		v.ID = ""
 	}
-}
-
-func setReliable(isReliable bool, movieItems []*models.MovieItem) []*models.MovieItem {
-	for _, movieItem := range movieItems {
-		movieItem.IsReliable = isReliable
-	}
-	log.Printf("setReliable: isReliable=%v, count=%d", isReliable, len(movieItems))
-	return movieItems
 }
 
 func main() {

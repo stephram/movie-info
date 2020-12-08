@@ -47,23 +47,6 @@ func TestPrivates(t *testing.T) {
 			IsReliable: true,
 		},
 	}
-	t.Run("Set Reliable", func(t *testing.T) {
-		for _, movieItem := range movieItems {
-			assert.True(t, movieItem.IsReliable)
-		}
-
-		_movieItems := setReliable(false, movieItems)
-
-		assert.NotNil(t, _movieItems)
-
-		for _, movieItem := range _movieItems {
-			assert.False(t, movieItem.IsReliable)
-		}
-
-		for _, movieItem := range movieItems {
-			assert.False(t, movieItem.IsReliable)
-		}
-	})
 
 	t.Run("updateMovieIDs", func(t *testing.T) {
 		for _, movieItem := range movieItems {

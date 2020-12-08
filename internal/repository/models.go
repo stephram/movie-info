@@ -9,6 +9,7 @@ type DbMovieItem struct {
 	Title    string
 	Type     string
 	Poster   string
+	Price    float64
 }
 
 func convertToDbMovieItem(movieProvider string, movieItem models.MovieItem) *DbMovieItem {
@@ -19,16 +20,19 @@ func convertToDbMovieItem(movieProvider string, movieItem models.MovieItem) *DbM
 		Title:    movieItem.Title,
 		Type:     movieItem.Type,
 		Poster:   movieItem.Poster,
+		Price:    movieItem.Price,
 	}
 }
 
 func convertToMovieItem(dbMovieItem DbMovieItem) *models.MovieItem {
 	return &models.MovieItem{
-		ID:      dbMovieItem.ID,
-		Title:   dbMovieItem.Title,
-		Type:    dbMovieItem.Type,
-		Poster:  dbMovieItem.Poster,
-		MovieID: dbMovieItem.MovieID,
+		ID:       dbMovieItem.ID,
+		Title:    dbMovieItem.Title,
+		Type:     dbMovieItem.Type,
+		Poster:   dbMovieItem.Poster,
+		Provider: dbMovieItem.Provider,
+		MovieID:  dbMovieItem.MovieID,
+		Price:    dbMovieItem.Price,
 	}
 }
 

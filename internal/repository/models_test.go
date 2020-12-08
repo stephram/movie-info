@@ -36,6 +36,7 @@ func TestConvertToDbMovieItem(t *testing.T) {
 			Title:    "one",
 			Type:     "movie",
 			Poster:   "one-poster",
+			Price:    11.1,
 		},
 		{
 			ID:       "fw24682468",
@@ -44,6 +45,7 @@ func TestConvertToDbMovieItem(t *testing.T) {
 			Title:    "two",
 			Type:     "movie",
 			Poster:   "two-poster",
+			Price:    22.2,
 		},
 		{
 			ID:       "fw35793579",
@@ -52,6 +54,7 @@ func TestConvertToDbMovieItem(t *testing.T) {
 			Title:    "tre",
 			Type:     "movie",
 			Poster:   "tre-poster",
+			Price:    33.3,
 		},
 	}
 
@@ -84,6 +87,7 @@ func TestConvertToDbMovieItem(t *testing.T) {
 			assert.Equal(t, dbMovieItem.ID, movieItems[i].ID)
 			assert.Equal(t, dbMovieItem.Title, movieItems[i].Title)
 			assert.Equal(t, dbMovieItem.Poster, movieItems[i].Poster)
+			assert.Equal(t, dbMovieItem.Price, movieItems[i].Price)
 		}
 	})
 }

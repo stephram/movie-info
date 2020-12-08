@@ -1,97 +1,99 @@
 package main
 
 import (
+	"encoding/json"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"log"
+	_ "log"
+	"movie-info/internal/models"
+	"movie-info/internal/repository"
 	"movie-info/internal/utils"
+	"net/http"
+	"os"
 )
 
 var (
-// Should be reading these from SSM
-// movieDataEndpoint  = os.Getenv("MOVIE_DATA_ENDPOINT")
-// movieDataApiKey    = os.Getenv("MOVIE_DATA_API_KEY")
-// movieProviderNames = os.Getenv("MOVIE_PROVIDERS")
-// movieTable         = os.Getenv("MOVIE_TABLE")
-//
-// client *http.Client
+	// Should be reading these from SSM
+	movieDataEndpoint = os.Getenv("MOVIE_DATA_ENDPOINT")
+	movieDataApiKey   = os.Getenv("MOVIE_DATA_API_KEY")
+	// movieProviderNames = os.Getenv("MOVIE_PROVIDERS")
+	movieTable = os.Getenv("MOVIE_TABLE")
+
+	log = utils.GetLogger()
+
+	client *http.Client
 )
 
 func init() {
-	// client = &http.Client{}
+	client = &http.Client{}
 }
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	log.Printf("RequestID=%s, RequestTime=%s, Path=%s, PathParameters=%+v, QueryStringParameters=%+v",
+	log.Info().Msgf("RequestID=%s, RequestTime=%s, Path=%s, PathParameters=%+v, QueryStringParameters=%+v",
 		request.RequestContext.RequestID,
 		request.RequestContext.RequestTime,
 		request.Path,
 		request.PathParameters,
 		request.QueryStringParameters)
-	/*
-		var movieProviders []string
-		jsonErr := json.Unmarshal([]byte(movieProviderNames), &movieProviders)
-		if jsonErr != nil {
-			return utils.CreateApiGwResponse(500,
-				fmt.Sprintf("MOVIE_PROVIDERS environment variable is invalid. Value=%s", movieProviders)), nil
+
+	movieID := request.QueryStringParameters["movieId"]
+
+	movieItems, rErr := repository.GetMoviesByMovieID(movieTable, movieID)
+	if rErr != nil {
+		log.Err(rErr).Msgf("failed to read movieID %s from repository", movieID)
+	}
+	log.Info().Interface("movieItems", movieItems).Msgf("read movies for movieID %s", movieID)
+
+	movieMap := make(map[string]*models.MovieItem)
+
+	for _, movieItem := range movieItems {
+		uri := movieDataEndpoint + "/" + movieItem.Provider + "/movie/" + movieItem.ID
+
+		req, _ := http.NewRequest("GET", uri, nil)
+		req.Header.Add("x-api-key", movieDataApiKey)
+
+		mRes, mErr := client.Do(req)
+		if mErr != nil {
+			return utils.CreateApiGwResponse(500, mErr.Error()), nil
 		}
+		defer mRes.Body.Close()
 
-		// movies := make(map[string][]*models.MovieItem)
-		movieMap := make(map[string]*models.MovieItem)
-
-		for _, movieProvider := range movieProviders {
-			req, _ := http.NewRequest("GET", movieDataEndpoint+"/"+movieProvider+"/movies", nil)
-			req.Header.Add("x-api-key", movieDataApiKey)
-			mRes, mErr := client.Do(req)
-			if mErr != nil {
-				return utils.CreateApiGwResponse(500, mErr.Error()), nil
-			}
-			defer mRes.Body.Close()
-
-			if mRes.StatusCode != 200 {
-				// Read cached results from DynamoDB
-				// movieItems, rErr := repository.GetProviderMovies(movieTable, movieProvider)
-				// if rErr != nil {
-				// 	log.Fatal(rErr)
-				// 	continue
-				// }
-				// movies[movieProvider] = setReliable(false, movieItems)
-				// aggregate(movies[movieProvider], movieMap)
-				continue
-			}
-
-			// Unmarshal the response, or if that fails try to read the most recent results for this
-			// provider from DynamoDB. If that fails then we don't return any movies for that provider.
-			var movieResponse models.MoviesResponse
-			jErr := json.NewDecoder(mRes.Body).Decode(&movieResponse)
-			if jErr != nil {
-				// Read cached results from DynamoDB
-				// movieItems, rErr := repository.GetProviderMovies(movieTable, movieProvider)
-				// if rErr != nil {
-				// 	return utils.CreateApiGwResponse(500, jErr.Error()), nil
-				// }
-				// movies[movieProvider] = setReliable(false, movieItems)
-				// aggregate(movies[movieProvider], movieMap)
-				continue
-			}
-			uErr := repository.UpdateProviderMovies(movieTable, movieProvider, movieResponse.Movies)
-			if uErr != nil {
-				log.Fatalf(errors.Wrapf(uErr, "failed to update database").Error())
-			}
-			// movies[movieProvider] = setReliable(true, movieResponse.Movies)
-
-			// aggregate(movies[movieProvider], movieMap)
+		if mRes.StatusCode != 200 {
+			log.Error().Msgf("Status %d (%s) : failed to retrieve movie from %s", mRes.StatusCode, mRes.Status, uri)
+			movieMap[movieItem.ID] = updateMovieItem(false, movieID, movieItem)
+			continue
 		}
+		log.Info().Msgf("retrieved movie info from %s", uri)
 
-		payload, jsonErr := json.Marshal(movieMap)
-		if jsonErr != nil {
-			return utils.CreateApiGwResponse(500, jsonErr.Error()), nil
+		var movieInfoResponse models.MovieInfoResponse
+		jErr := json.NewDecoder(mRes.Body).Decode(&movieInfoResponse)
+		if jErr != nil {
+			log.Err(jErr).Msgf("failed to decode MovieInfoResponse from url %s", uri)
+			movieMap[movieItem.ID] = updateMovieItem(false, movieID, movieItem)
+			continue
 		}
-		// OK, return the Movies
-		return utils.CreateApiGwResponse(200, string(payload)), nil
+		movieMap[movieItem.ID] = updateMovieItem(true, movieID, models.ConvertToMovieItem(movieInfoResponse))
+		movieMap[movieItem.ID].Provider = movieItem.Provider
 
-	*/
-	return utils.CreateApiGwResponse(200, "Hello"), nil
+		rErr := repository.UpdateMovieItem(movieTable, movieMap[movieItem.ID])
+		if rErr != nil {
+			log.Err(rErr).Msgf("failed to update MovieItem")
+		}
+	}
+	payload, jsonErr := json.Marshal(movieMap)
+	if jsonErr != nil {
+		return utils.CreateApiGwResponse(500, jsonErr.Error()), nil
+	}
+	log.Info().Interface("movies", movieMap).Msgf("Success reading movies for MovieID %s", movieID)
+
+	// OK, return the Movies
+	return utils.CreateApiGwResponse(200, string(payload)), nil
+}
+
+func updateMovieItem(isReliable bool, movieID string, movieItem *models.MovieItem) *models.MovieItem {
+	movieItem.IsReliable = isReliable
+	movieItem.MovieID = movieID
+	return movieItem
 }
 
 func main() {
