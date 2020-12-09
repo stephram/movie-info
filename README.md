@@ -123,11 +123,12 @@ TABLE_NAME=<table-name> make scan-table
 
 Due to time constraints the following issues have been left outstanding.
 
-* The static website development is not completed. The only rendering of the output is in Visulations included in Postman Collection.
+* The static website development is not completed. The only rendering of the output is in Visualisations included in Postman Collection.
 * Secrets ( **x-api-key** ) and other configuration data should be stored in AWS Secret Manager and SSM. They are currently hard-coded.
 * Test coverage is low and needs to be increased, however TDD techniques we employed during development.
-* Lambda 'Handler' code should be refactored to enable fine grained Unit testing - including the use of mocks for dependencies.
+* Lambda 'Handler' code should be refactored to enable fine-grained Unit testing - including the use of mocks for dependencies.
 * Code needs refactoring to improve readability and to simplification.
+* Possibly consolidate into a single Lambda and use REST API semantics. i.e. `/movies/{movieId}` instead of `/movie?movieId={movieId}`.
 
 ## Known issues
 
