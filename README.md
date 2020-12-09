@@ -2,7 +2,7 @@
 
 ## Description
 
-A solution to added to a customer’s website that can solve their core problem: allow users to see which of
+A solution to be added to a customer’s website that can solve their core problem: allow users to see which of
 the two streaming providers are streaming their chosen movie at a lower price.
 
 ## Assumptions
