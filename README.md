@@ -11,6 +11,8 @@ the two streaming providers are streaming their chosen movie at a lower price.
 * The Movie ID values are the same for each Movie not including the first two characters.
 * The Movie titles being offered by each Provider are identical.
 * There are only two Providers.
+* The Provider labels on the Price screen are populated according to which price is lowest. 
+  i.e. Cinemaworld will not always be the first listed. 
 
 ## Design
 
@@ -23,11 +25,10 @@ in the browser, accessing the Lambda endpoints and using a HandlebarsJS template
 of the content. _Unfortunately the static webpage has not been completed, but WIP can be view in the
 included **Postman** collection._
 
-Sequence diagram
-![movieInfoAPI](/sequence-diagram.png)
+### Sequence diagram
+![movieInfoAPI](./sequence-diagram.png)
 
 ## Implementation
-
 
 The basics of this project were generated using AWS SAM CLI.
 
@@ -122,8 +123,25 @@ TABLE_NAME=<table-name> make scan-table
 
 Due to time constraints the following issues have been left outstanding.
 
-* The static website development is not completed. The onl rendering of the output is in the included Postman Collection.
-* Secrets (x-api-key) and other configuration data should be stored in AWS Secret Manager and SSM. They are currently hard-coded.
+* The static website development is not completed. The only rendering of the output is in Visulations included in Postman Collection.
+* Secrets ( **x-api-key** ) and other configuration data should be stored in AWS Secret Manager and SSM. They are currently hard-coded.
 * Test coverage is low and needs to be increased, however TDD techniques we employed during development.
 * Lambda 'Handler' code should be refactored to enable fine grained Unit testing - including the use of mocks for dependencies.
 * Code needs refactoring to improve readability and to simplification.
+
+## Known issues
+
+* An invocation of the `/movies` endpoint that succeeds in retrieving information from the Lexicon Movie service
+will overwrite pricing information in the MoviesTable.
+* It's possible that one or both prices could show as '$0', however this has not yet been observed.
+* Price is displayed 0 or 1 decimal places. It should always display with 2.
+* Error scenarios need to be tightened up. A failure to write to DynamoDB will result in an error being returned, 
+  despite there being valid information available. This problem has not been observed.
+* The Provider labels do not have their first letter capitalised.
+
+## Screenshots
+
+![movieList](./screenshots/movielist.png)
+![movieinfo](./screenshots/movieinfo.png)
+![movieinfo](./screenshots/movieinfo-cached.png)
+

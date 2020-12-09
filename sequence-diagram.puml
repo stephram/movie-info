@@ -1,4 +1,4 @@
-@startuml get-movie-data-diagram
+@startuml sequence-diagram
 
 title MovieInfoAPI
 
@@ -12,60 +12,71 @@ participant SSM
 database DynamoDB
 participant LexiconDigital
 
-== Movie List ==
-PrimaryWebsite -> ApiGateway : <b>GET</b> <i>/movies</i>
-ApiGateway -> GetMoviesLambda : <b>GET</b> <i>/movies</i>
+note right of ApiGateway 
+**API Gateway** All requests routed via API Gateway
+end note
 
+== Movie List ==
+PrimaryWebsite -> GetMoviesLambda : <b>GET</b> <i>/movies</i>
+activate ApiGateway #LightGray
 activate GetMoviesLambda #LightGreen
 group MoviesHandler
-    GetMoviesLambda -> SSM : Get Parameters <i>[TableName, MovieEndpoint, MovieEndpointApiKey]</i>
+    GetMoviesLambda -> SSM : **GET** Parameters <i>[Endpoint, ApiKey, TableName, Providers]</i>
     activate SSM #LightGreen
-    GetMoviesLambda <- SSM : Values
+    GetMoviesLambda <- SSM : <i>[Configuration parameter values]</i>
     deactivate SSM
 
     GetMoviesLambda -> LexiconDigital : <b>GET</b> <i>/{provider}/movies</i>
     activate LexiconDigital #LightGreen
     alt Success
         GetMoviesLambda <- LexiconDigital : <b>200</b> <i>[movies...]</i>
+        GetMoviesLambda -> DynamoDB : Cache the results
     else Failure
         GetMoviesLambda <- LexiconDigital : <b>4XX | 5XX</b> <i>error-message</i>
-        GetMoviesLambda -> DynamoDB : **<< Get(TableName, POST body) >>**
+        GetMoviesLambda -> DynamoDB : **<< Read cached results >>**
         activate DynamoDB #LightGreen
         alt Success
-            GetMoviesLambda <- DynamoDB : **<< Success >>**
+            GetMoviesLambda <- DynamoDB : **<< Success >>** <i>[movie list]</i>
         else Failure
-            GetMoviesLambda <- DynamoDB : Failure: <i>error-code, error-message</i>
+            GetMoviesLambda <- DynamoDB : **<< Failure >>** <i>error-code, error-message</i>
         end
         deactivate DynamoDB
     end
     deactivate LexiconDigital
 end
-
-ApiGateway <- GetMoviesLambda : HTTP Response [Success 200 | Failure 4XX/5XX]
+PrimaryWebsite <- GetMoviesLambda : HTTP Response [**Success 200** [Body: MovieList] | **Failure 4XX/5XX **]
 deactivate GetMoviesLambda
+deactivate ApiGateway
 
 == Movie Details ==
 
-PrimaryWebsite -> ApiGateway : <b>GET</b> <i>/movie?movieID={movieId}</i>
-ApiGateway -> GetMoviesLambda : <b>GET</b>
+PrimaryWebsite -> GetMovieLambda : **GET** <i>/movie?movieID={movieId}</i>
+activate ApiGateway #LightGray
 
-activate GetMoviesLambda #LightGreen
+activate GetMovieLambda #LightGreen
 group MovieHandler
-    GetMoviesLambda -> SSM : Get Parameters TableName, MovieEndpoint, MovieEndpointApiKey
+    GetMovieLambda -> SSM : **GET** Parameters <i>[Endpoint, ApiKey, TableName, Providers]</i>
     activate SSM #LightGreen
-    GetMoviesLambda <- SSM : Values
+    GetMovieLambda <- SSM : <i>[Configuration parameter values]</i>
     deactivate SSM
 
-    GetMoviesLambda -> DynamoDB : **<< Get(TableName, POST body) >>**
-    activate DynamoDB #LightGreen
+    GetMovieLambda -> LexiconDigital : <b>GET</b> <i>/{provider}/movie?movieID={movieId}
     alt Success
-        GetMoviesLambda <- DynamoDB : **<< Success >>**
+        GetMovieLambda <- LexiconDigital : <b>200</b> <i>[movies...]</i>
+        GetMovieLambda -> DynamoDB : Cache the results
     else Failure
-        GetMoviesLambda <- DynamoDB : **<< Failure: [error-code, error-message] >>**
+        GetMovieLambda <- LexiconDigital : <b>4XX | 5XX</b> <i>error-message</i>
+        GetMovieLambda -> DynamoDB : **<< Read cached results >>**
+        activate DynamoDB #LightGreen
+        alt Success
+            GetMovieLambda <- DynamoDB : **<< Success >>** <i>[details for {movieID}]</i>
+        else Failure
+            GetMovieLambda <- DynamoDB : **<< Failure >>** <i>error-code, error-message</i>
+        end
+        deactivate DynamoDB
     end
-    deactivate DynamoDB
 end
-ApiGateway <- GetMoviesLambda : HTTP Response [Success <b>200</b> | Failure 4XX/5XX]
-deactivate GetMoviesLambda
+PrimaryWebsite <- GetMovieLambda : HTTP Response [**Success 200** [Body: Movie Pricing] | **Failure 4XX/5XX]**
+deactivate GetMovieLambda
 
 @enduml
