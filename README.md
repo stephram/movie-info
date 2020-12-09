@@ -22,8 +22,8 @@ appropriately configured S3 bucket.
 
 The dynamic content of the webpages would be retrieved using scripts in the static webpage by running
 in the browser, accessing the Lambda endpoints and using a HandlebarsJS template for generation
-of the content. _Unfortunately the static webpage has not been completed, but WIP can be view in the
-included **Postman** collection._
+of the content. _Unfortunately the static webpage has not been completed, but WIP can be viewed in the
+included **Postman** collection. **I've also attached some screenshots at the bottom of this document.**_
 
 ### Sequence diagram
 ![movieInfoAPI](./sequence-diagram.png)
