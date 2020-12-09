@@ -1,6 +1,8 @@
 .PHONY: build
 
-S3_BUCKET = aws-sam-cli-managed-default-samclisourcebucket-1cu3rvskuyri4
+S3_BUCKET ?= aws-sam-cli-managed-default-samclisourcebucket-1cu3rvskuyri4
+STACK_NAME ?= movie-info
+TABLE_NAME ?= MoviesTable
 
 .ONESHELL:
 setup:
@@ -34,3 +36,16 @@ deploy: build
 
 delete:
 	aws cloudformation delete-stack --stack-name movie-info --region ap-southeast-2
+
+.ONESHELL:
+describe-stack:
+	aws cloudformation describe-stacks --stack-name $(STACK_NAME)
+
+.ONESHELL:
+describe-events:
+	aws cloudformation describe-stack-events --stack-name $(STACK_NAME)
+
+.ONESHELL:
+scan-table:
+	@echo "Scan Table: $(TABLE_NME)"
+	aws dynamodb scan --table-name $(TABLE_NAME)

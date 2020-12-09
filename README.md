@@ -1,5 +1,34 @@
 # movie-info
 
+## Description
+
+A solution to added to a customer’s website that can solve their core problem: allow users to see which of
+the two streaming providers are streaming their chosen movie at a lower price.
+
+## Assumptions
+
+* The Movie ID values consistently have the first two characters represent the provider.
+* The Movie ID values are the same for each Movie not including the first two characters.
+* The Movie titles being offered by each Provider are identical.
+* There are only two Providers.
+
+## Design
+
+The intention was to create two Lambda HTTP endpoints for the retrieval of the list of available Movies
+and the details of a specific Movie. The endpoints are to be accessed by a static webpage hosted in an
+appropriately configured S3 bucket.
+
+The dynamic content of the webpages would be retrieved using scripts in the static webpage by running
+in the browser, accessing the Lambda endpoints and using a HandlebarsJS template for generation
+of the content. _Unfortunately the static webpage has not been completed, but WIP can be view in the
+included **Postman** collection._
+
+Sequence diagram
+![movieInfoAPI](/sequence-diagram.png)
+
+## Implementation
+
+
 The basics of this project were generated using AWS SAM CLI.
 
 ```bash
@@ -22,59 +51,22 @@ The basics of this project were generated using AWS SAM CLI.
 * [Docker installed](https://www.docker.com/community-edition)
 * [Golang](https://golang.org)
 * SAM CLI - [Install the SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
+* AWS_PROFILE environment variable set to the name of an account with Administration privileges
 
 ## Setup process
 
 ### Installing dependencies & building the target 
 
-In this example we use the built-in `sam build` to automatically download all the dependencies and package our build target.   
-Read more about [SAM Build here](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-cli-command-reference-sam-build.html) 
-
-The `sam build` command is wrapped inside of the `Makefile`. To execute this simply run
+Assuming your Golang environment is setup correctly. You will be able to build the project with
  
 ```shell
-make
+make build
 ```
 
-### Local development
-
-**Invoking function locally through local API Gateway**
+To deploy the application for the first time, run the following in your shell:
 
 ```bash
-sam local start-api
-```
-
-If the previous command ran successfully you should now be able to hit the following local endpoint to invoke your function `http://localhost:3000/hello`
-
-**SAM CLI** is used to emulate both Lambda and API Gateway locally and uses our `template.yaml` to understand how to bootstrap this environment (runtime, where the source code is, etc.) - The following excerpt is what the CLI will read in order to initialize an API and its routes:
-
-```yaml
-...
-Events:
-    CatchAll:
-        Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
-        Properties:
-            Path: /movies
-            Method: get
-```
-
-## Packaging and deployment
-
-AWS Lambda Golang runtime requires a flat folder with the executable generated on build step. SAM will use `CodeUri` property to know where to look up for the application:
-
-```yaml
-...
-    GetMoviesFunction:
-        Type: AWS::Serverless::Function
-        Properties:
-            CodeUri: lambdas/getMovies/
-            ...
-```
-
-To deploy your application for the first time, run the following in your shell:
-
-```bash
-sam deploy --guided
+make deploy
 ```
 
 The command will package and deploy your application to AWS, with a series of prompts:
@@ -87,9 +79,24 @@ The command will package and deploy your application to AWS, with a series of pr
 
 You can find your API Gateway Endpoint URL in the output values displayed after deployment.
 
+The API endpoint can also be retrieved using a make task; the output of which contain the 
+information in the **MovieInfoAPI** OutputKey.
+```shell
+make describe-stack
+```
+
+Example output.
+```shell
+{
+    "OutputKey": "MovieInfoAPI",
+    "OutputValue": "https://ehfia8tqca.execute-api.ap-southeast-2.amazonaws.com/Prod/",
+    "Description": "API Gateway endpoint URL for Prod environment"
+}
+```
+
 ### Testing
 
-The `test` task will discover and run all of the tests and perform a lint check.
+The `test` task will discover and run all of the tests and perform a lint check on source code the SAM template.
 
 ```shell
 make test
@@ -98,7 +105,6 @@ make test
 Retrieve a list of available movies
 ```shell
 curl "https://ehfia8tqca.execute-api.ap-southeast-2.amazonaws.com/Prod/movies"
-
 ```
 
 Retrieve information a about a specific movie
@@ -106,51 +112,18 @@ Retrieve information a about a specific movie
 curl "https://ehfia8tqca.execute-api.ap-southeast-2.amazonaws.com/Prod/movie?movieId=0076759" 
 ```
 
-# Appendix
-
-### Golang installation
-
-Please ensure Go 1.x (where 'x' is the latest version) is installed as per the instructions on the official golang website: https://golang.org/doc/install
-
-A quickstart way would be to use Homebrew, chocolatey or your linux package manager.
-
-#### Homebrew (Mac)
-
-Issue the following command from the terminal:
-
+Display the contents of the DyanmoDB table that caches Movie information. 
+_You'll first need to find the name of the table with `aws dynamodb list-tables`._
 ```shell
-brew install golang
+TABLE_NAME=<table-name> make scan-table
 ```
 
-If it's already installed, run the following command to ensure it's the latest version:
+## Caveats and needed improvements.
 
-```shell
-brew update
-brew upgrade golang
-```
+Due to time constraints the following issues have been left outstanding.
 
-#### Chocolatey (Windows)
-
-Issue the following command from the powershell:
-
-```shell
-choco install golang
-```
-
-If it's already installed, run the following command to ensure it's the latest version:
-
-```shell
-choco upgrade golang
-```
-
-## Bringing to the next level
-
-Here are a few ideas that you can use to get more acquainted as to how this overall process works:
-
-* Create an additional API resource (e.g. /hello/{proxy+}) and return the name requested through this new path
-* Update unit test to capture that
-* Package & Deploy
-
-Next, you can use the following resources to know more about beyond hello world samples and how others structure their Serverless applications:
-
-* [AWS Serverless Application Repository](https://aws.amazon.com/serverless/serverlessrepo/)
+* The static website development is not completed. The onl rendering of the output is in the included Postman Collection.
+* Secrets (x-api-key) and other configuration data should be stored in AWS Secret Manager and SSM. They are currently hard-coded.
+* Test coverage is low and needs to be increased, however TDD techniques we employed during development.
+* Lambda 'Handler' code should be refactored to enable fine grained Unit testing - including the use of mocks for dependencies.
+* Code needs refactoring to improve readability and to simplification.
