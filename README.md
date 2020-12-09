@@ -123,7 +123,7 @@ TABLE_NAME=<table-name> make scan-table
 
 Due to time constraints the following issues have been left outstanding.
 
-* The static website development is not completed. The only rendering of the output is in Visualisations included in Postman Collection.
+* The static website development is not completed. The only rendering of the output is in the Visualisations included in Postman Collection.
 * Secrets ( **x-api-key** ) and other configuration data should be stored in AWS Secret Manager and SSM. They are currently hard-coded.
 * Test coverage is low and needs to be increased, however TDD techniques we employed during development.
 * Lambda 'Handler' code should be refactored to enable fine-grained Unit testing - including the use of mocks for dependencies.
@@ -133,9 +133,10 @@ Due to time constraints the following issues have been left outstanding.
 ## Known issues
 
 * An invocation of the `/movies` endpoint that succeeds in retrieving information from the Lexicon Movie service
-will overwrite pricing information in the MoviesTable.
-* It's possible that one or both prices could show as '$0', however this has not yet been observed.
-* Price is displayed 0 or 1 decimal places. It should always display with 2.
+  will overwrite pricing information in the MoviesTable. This should be changed so that pricing information is preserved. 
+  This issues can cause the next problem.
+* It's possible that in rare circumstances one or both prices could show as '$0', however this has not yet been observed.
+* Price is displayed with 0 or 1 decimal places. It should always be displayed with 2 decimal places.
 * Error scenarios need to be tightened up. A failure to write to DynamoDB will result in an error being returned, 
   despite there being valid information available. This problem has not been observed.
 * The Provider labels do not have their first letter capitalised.
