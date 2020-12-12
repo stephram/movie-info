@@ -14,6 +14,7 @@ build-mocks:
 	#mockery --all --dir ./internal
 	#mockery --all -srcpkg github.com/aws/aws-sdk-go/aws
 	mockery --all --srcpkg github.com/aws/aws-sdk-go/service/dynamodb
+	mockery --name Repository --dir ./internal/repository --recursive
 
 lint:
 	aws cloudformation validate-template --template-body file://template.yaml

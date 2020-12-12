@@ -22,10 +22,12 @@ var (
 	log = utils.GetLogger()
 
 	client *http.Client
+	repo   repository.Repository
 )
 
 func init() {
 	client = &http.Client{}
+	repo = repository.New()
 }
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -38,7 +40,7 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 
 	movieID := request.QueryStringParameters["movieId"]
 
-	movieItems, rErr := repository.GetMoviesByMovieID(movieTable, movieID)
+	movieItems, rErr := repo.GetMoviesByMovieID(movieTable, movieID)
 	if rErr != nil {
 		log.Err(rErr).Msgf("failed to read movieID %s from repository", movieID)
 	}
@@ -76,7 +78,7 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		_movieItem.Provider = movieItem.Provider
 		movieList = append(movieList, updateMovieItem(true, movieID, _movieItem))
 
-		rErr := repository.UpdateMovieItem(movieTable, _movieItem)
+		rErr := repo.UpdateMovieItem(movieTable, _movieItem)
 		if rErr != nil {
 			log.Err(rErr).Msgf("failed to update MovieItem")
 		}

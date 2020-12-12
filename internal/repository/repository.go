@@ -12,10 +12,21 @@ import (
 	"movie-info/internal/utils"
 )
 
+type Repository interface {
+	CreateClient() *dynamodb.DynamoDB
+	UpdateProviderMovies(tableName string, movieProvider string, movieItems []*models.MovieItem) error
+	GetProviderMovies(tableName string, movieProvider string) ([]*models.MovieItem, error)
+	UpdateMovieItem(tableName string, movieItem *models.MovieItem) error
+	GetMoviesByMovieID(tableName string, movieID string) ([]*models.MovieItem, error)
+}
+
+type repositoryImpl struct {
+}
+
 var log = utils.GetLogger()
 
-func UpdateProviderMovies(tableName string, movieProvider string, movieItems []*models.MovieItem) error {
-	ddb := createClient()
+func (r *repositoryImpl) UpdateProviderMovies(tableName string, movieProvider string, movieItems []*models.MovieItem) error {
+	ddb := r.CreateClient()
 
 	for _, movieItem := range movieItems {
 		dbMovieItem := convertToDbMovieItem(movieProvider, *movieItem)
@@ -38,8 +49,8 @@ func UpdateProviderMovies(tableName string, movieProvider string, movieItems []*
 	return nil
 }
 
-func GetProviderMovies(tableName string, movieProvider string) ([]*models.MovieItem, error) {
-	ddb := createClient()
+func (r *repositoryImpl) GetProviderMovies(tableName string, movieProvider string) ([]*models.MovieItem, error) {
+	ddb := r.CreateClient()
 
 	res, qErr := ddb.Query(&dynamodb.QueryInput{
 		TableName: aws.String(tableName),
@@ -67,8 +78,8 @@ func GetProviderMovies(tableName string, movieProvider string) ([]*models.MovieI
 	return convertToMovieItems(dbMovieItems), nil
 }
 
-func UpdateMovieItem(tableName string, movieItem *models.MovieItem) error {
-	ddb := createClient()
+func (r *repositoryImpl) UpdateMovieItem(tableName string, movieItem *models.MovieItem) error {
+	ddb := r.CreateClient()
 
 	dbMovieItem := convertToDbMovieItem(movieItem.Provider, *movieItem)
 
@@ -88,8 +99,8 @@ func UpdateMovieItem(tableName string, movieItem *models.MovieItem) error {
 	return nil
 }
 
-func GetMoviesByMovieID(tableName string, movieID string) ([]*models.MovieItem, error) {
-	ddb := createClient()
+func (r *repositoryImpl) GetMoviesByMovieID(tableName string, movieID string) ([]*models.MovieItem, error) {
+	ddb := r.CreateClient()
 
 	// Create the Expression to fill the input struct with.
 	filt := expression.Name("MovieID").Equal(expression.Value(movieID))
@@ -128,10 +139,15 @@ func GetMoviesByMovieID(tableName string, movieID string) ([]*models.MovieItem, 
 	return convertToMovieItems(dbMovieItems), nil
 }
 
-func createClient() *dynamodb.DynamoDB {
+func (r *repositoryImpl) CreateClient() *dynamodb.DynamoDB {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 	// Create DynamoDB client
 	return dynamodb.New(sess)
+}
+
+func New() Repository {
+	repo := &repositoryImpl{}
+	return repo
 }
