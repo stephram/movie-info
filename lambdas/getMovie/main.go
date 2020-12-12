@@ -31,11 +31,10 @@ func init() {
 }
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	log.Info().Msgf("RequestID=%s, RequestTime=%s, Path=%s, PathParameters=%+v, QueryStringParameters=%+v",
+	log.Info().Msgf("RequestID=%s, RequestTime=%s, Path=%s, QueryStringParameters=%+v",
 		request.RequestContext.RequestID,
 		request.RequestContext.RequestTime,
 		request.Path,
-		request.PathParameters,
 		request.QueryStringParameters)
 
 	movieID := request.QueryStringParameters["movieId"]
