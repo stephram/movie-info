@@ -127,7 +127,6 @@ func getProviderMovies(movieProvider string, movieMap map[string][]*models.Movie
 			return rErr
 		}
 		movieMap[movieProvider] = models.SetReliable(false, movieItems)
-		// aggregate(*movies[movieProvider], movieMap)
 		return nil
 	}
 
@@ -143,15 +142,15 @@ func getProviderMovies(movieProvider string, movieMap map[string][]*models.Movie
 			return rErr
 		}
 		movieMap[movieProvider] = models.SetReliable(false, movieItems)
-		// aggregate(*movies[movieProvider], movieMap)
 		return nil
 	}
 	movieMap[movieProvider] = models.SetReliable(true, movieResponse.Movies)
-
 	return nil
 }
 
 func updateCacheForProvider(movieProvider string, movieItems []*models.MovieItem) error {
+	log.Info().Msgf("updating cache for movie Provider %s", movieProvider)
+
 	uErr := repo.UpdateProviderMovies(movieTable, movieProvider, movieItems)
 	if uErr != nil {
 		return uErr
@@ -160,7 +159,6 @@ func updateCacheForProvider(movieProvider string, movieItems []*models.MovieItem
 }
 
 func readCacheForProvider(movieProvider string) ([]*models.MovieItem, error) {
-	// Read cached results from DynamoDB
 	log.Info().Msgf("reading cached results for movie Provider %s", movieProvider)
 
 	movieItems, rErr := repo.GetProviderMovies(movieTable, movieProvider)
