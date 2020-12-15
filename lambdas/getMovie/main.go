@@ -16,7 +16,7 @@ var (
 	// Should be reading these from SSM
 	movieDataEndpoint = os.Getenv("MOVIE_DATA_ENDPOINT")
 	movieDataApiKey   = os.Getenv("MOVIE_DATA_API_KEY")
-	// movieProviderNames = os.Getenv("MOVIE_PROVIDERS")
+	movieProviderNames = os.Getenv("MOVIE_PROVIDERS")
 	movieTable = os.Getenv("MOVIE_TABLE")
 
 	log = utils.GetLogger()
@@ -40,6 +40,9 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		request.QueryStringParameters)
 
 	movieID := request.QueryStringParameters["movieId"]
+	if movieID == nil {
+		return utils.CreateApiGwResponse(400, "Missing movieId parameter"), nil
+	}
 
 	movieItems, rErr := repo.GetMoviesByMovieID(movieTable, movieID)
 	if rErr != nil {
@@ -47,6 +50,22 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}
 	log.Info().Interface("movieItems", movieItems).Msgf("read movies for movieID %s", movieID)
 
+	movieList, mErr := getMovieFromProviders(movieItems)
+	if mErr != nil {
+		return utils.CreateApiGwResponse(500, mErr.Error()), nil
+	}
+
+	payload, jErr := json.Marshal(movieList)
+	if jErr != nil {
+		return utils.CreateApiGwResponse(500, jErr.Error()), nil
+	}
+	log.Info().Interface("movies", movieList).Msgf("Success reading movies for MovieID %s", movieID)
+
+	// OK, return the Movies
+	return utils.CreateApiGwResponse(200, string(payload)), nil
+}
+
+func getMovieFromProviders(movieItems []*models.MovieItem) ([]*models.MovieItem, error) {
 	movieList := make([]*models.MovieItem, 0)
 
 	for _, movieItem := range movieItems {
@@ -57,7 +76,7 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 
 		mRes, mErr := client.Do(req)
 		if mErr != nil {
-			return utils.CreateApiGwResponse(500, mErr.Error()), nil
+			return nil, mErr
 		}
 		defer mRes.Body.Close()
 
@@ -84,14 +103,7 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 			log.Err(rErr).Msgf("failed to update MovieItem")
 		}
 	}
-	payload, jsonErr := json.Marshal(movieList)
-	if jsonErr != nil {
-		return utils.CreateApiGwResponse(500, jsonErr.Error()), nil
-	}
-	log.Info().Interface("movies", movieList).Msgf("Success reading movies for MovieID %s", movieID)
-
-	// OK, return the Movies
-	return utils.CreateApiGwResponse(200, string(payload)), nil
+	return movieList, nil
 }
 
 func updateMovieItem(isReliable bool, movieID string, movieItem *models.MovieItem) *models.MovieItem {
