@@ -30,6 +30,8 @@ func init() {
 	repo = repository.New()
 }
 
+// NEEDS REFACTORING. LOOK AWAY.
+
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	log.Info().Msgf("RequestID=%s, RequestTime=%s, Path=%s, QueryStringParameters=%+v",
 		request.RequestContext.RequestID,
