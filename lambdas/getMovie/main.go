@@ -16,8 +16,7 @@ var (
 	// Should be reading these from SSM
 	movieDataEndpoint = os.Getenv("MOVIE_DATA_ENDPOINT")
 	movieDataApiKey   = os.Getenv("MOVIE_DATA_API_KEY")
-	movieProviderNames = os.Getenv("MOVIE_PROVIDERS")
-	movieTable = os.Getenv("MOVIE_TABLE")
+	movieTable        = os.Getenv("MOVIE_TABLE")
 
 	log = utils.GetLogger()
 
@@ -40,7 +39,7 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		request.QueryStringParameters)
 
 	movieID := request.QueryStringParameters["movieId"]
-	if movieID == nil {
+	if movieID == "" {
 		return utils.CreateApiGwResponse(400, "Missing movieId parameter"), nil
 	}
 
@@ -50,7 +49,7 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}
 	log.Info().Interface("movieItems", movieItems).Msgf("read movies for movieID %s", movieID)
 
-	movieList, mErr := getMovieFromProviders(movieItems)
+	movieList, mErr := getMovieFromProviders(movieID, movieItems)
 	if mErr != nil {
 		return utils.CreateApiGwResponse(500, mErr.Error()), nil
 	}
@@ -65,11 +64,11 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	return utils.CreateApiGwResponse(200, string(payload)), nil
 }
 
-func getMovieFromProviders(movieItems []*models.MovieItem) ([]*models.MovieItem, error) {
+func getMovieFromProviders(movieID string, movieItems []*models.MovieItem) ([]*models.MovieItem, error) {
 	movieList := make([]*models.MovieItem, 0)
 
 	for _, movieItem := range movieItems {
-		uri := movieDataEndpoint + "/" + movieItem.Provider + "/movie/" + movieItem.ID
+		uri := movieDataEndpoint + "/" + movieItem.Provider + "/movie/" + movieID
 
 		req, _ := http.NewRequest("GET", uri, nil)
 		req.Header.Add("x-api-key", movieDataApiKey)
