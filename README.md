@@ -5,6 +5,8 @@
 A solution to be added to a customer’s website that can solve their core problem: allow users to see which of
 the two streaming providers are streaming their chosen movie at a lower price.
 
+*See the `Challenge_Pack.pdf` and `Wireframes.pdf` files in the root of the repository for a detailed description of the challenge.*
+
 ## Assumptions
 
 * The Movie ID values consistently have the first two characters represent the provider.
@@ -17,7 +19,7 @@ the two streaming providers are streaming their chosen movie at a lower price.
 ## Design
 
 The intention was to create two Lambda HTTP endpoints for the retrieval of the list of available Movies
-and the details of a specific Movie. The endpoints are to be accessed by a static webpage hosted in an
+and the details of a specific Movie. The endpoints were to be accessed by a static webpage hosted in an
 appropriately configured S3 bucket.
 
 The dynamic content of the webpages would be retrieved using scripts in the static webpage by running
